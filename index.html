@@ -600,125 +600,140 @@ function spawnBtnParticles(){const bp=document.getElementById('btn-particles');b
 const LOADER_MSGS=['INITIALIZING HUNT SEQUENCE...','PARSING CODE STRUCTURE...','FEEDING TO AI ENGINE...','DECODING LOGIC FLOWS...','MAPPING ITERATIONS...','GENERATING EXPLANATIONS...'];
 let loaderMsgIdx=0,loaderInterval=null;
 
+<script>
 async function huntCode(){
-  const code=codeInput.value.trim();
-  if(!code){flashError('Please paste some code first!');return;}
-  stopPlay();huntData=null;currentStep=-1;totalLines=0;
+  const code = codeInput.value.trim();
+
+  if (!code) {
+    flashError('Please paste some code first!');
+    return;
+  }
+
+  stopPlay();
+  huntData = null;
+  currentStep = -1;
+  totalLines = 0;
+
   document.getElementById('results-section').classList.remove('visible');
-  document.getElementById('results-section').style.display='none';
-  document.getElementById('error-container').innerHTML='';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('error-container').innerHTML = '';
+
   spawnBtnParticles();
-  const btn=document.getElementById('hunt-btn');
-  const btnTxt=document.getElementById('hunt-btn-text');
-  btn.classList.add('loading');btnTxt.textContent='🔍 HUNTING...';
-  const li=document.getElementById('loading-indicator');
-  li.style.display='block';loaderMsgIdx=0;
-  const lm=document.getElementById('loader-msg');
-  loaderInterval=setInterval(()=>{lm.textContent=LOADER_MSGS[loaderMsgIdx%LOADER_MSGS.length];loaderMsgIdx++;},1000);
-  try{
-    const prompt=`You are a brilliant code educator. Analyze the following ${currentLang} code and return ONLY a JSON object (no markdown, no backticks, no extra text).
 
-The JSON must follow this EXACT structure:
-{
-  "overview": "A clear 1-2 sentence description of what this code does overall",
-  "language": "${currentLang}",
-  "complexity": "Beginner | Intermediate | Advanced",
-  "totalLines": <integer — count of non-empty lines>,
-  "lines": [
-    {
-      "lineNumber": <integer starting at 1>,
-      "code": "<exact code text of this line>",
-      "explanation": "<Clear, detailed explanation of what this line does, why it matters>",
-      "type": "<one of: import | declaration | assignment | loop | condition | function_def | return | print | expression | comment | other>",
-      "isIterative": <true if this line is inside or defines a loop>,
-      "iterationNote": "<if isIterative, describe how iterations work for this line, e.g. 'This runs for i = 0,1,2,...,n-1'. Otherwise null>",
-      "iterationCount": <if loop, estimated max iterations as integer, else null>
+  const btn = document.getElementById('hunt-btn');
+  const btnTxt = document.getElementById('hunt-btn-text');
+  const li = document.getElementById('loading-indicator');
+  const lm = document.getElementById('loader-msg');
+
+  btn.classList.add('loading');
+  btnTxt.textContent = '🔍 HUNTING...';
+
+  li.style.display = 'block';
+  loaderMsgIdx = 0;
+
+  loaderInterval = setInterval(() => {
+    lm.textContent = LOADER_MSGS[loaderMsgIdx % LOADER_MSGS.length];
+    loaderMsgIdx++;
+  }, 1000);
+
+  try {
+    const res = await fetch('/api/hunt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code: code,
+        language: currentLang
+      })
+    });
+
+    let result;
+
+    try {
+      result = await res.json();
+    } catch (e) {
+      throw new Error('Invalid JSON response from backend');
     }
-  ]
-}
 
-RULES:
-- Include EVERY line including blank lines (mark blank lines with code:"" and explanation:"Empty line for readability" and type:"other")
-- Be educational and clear in explanations
-- For loop bodies, explain what each iteration does
-- Do NOT return markdown, ONLY raw JSON
+    if (!res.ok) {
+      console.error(result);
+      throw new Error(result?.error || 'Backend request failed');
+    }
 
-Code to analyze:
-${code}`;
-    
- const res = await fetch('/api/hunt', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    code: code,
-    language: currentLang
-  })
-});
+    if (!result || !result.data) {
+      console.error(result);
+      throw new Error('Invalid response from backend');
+    }
 
-// ✅ STEP 1: parse response safely
-let result;
-try {
-  result = await res.json();
-} catch (e) {
-  throw new Error("Invalid JSON response from backend");
-}
+    const data = result.data;
 
-// ✅ STEP 2: check backend status
-if (!res.ok) {
-  console.error(result);
-  throw new Error(result?.error || "Backend request failed");
-}
+    let raw = '';
 
-// ✅ STEP 3: validate structure
-if (!result || !result.data) {
-  console.error(result);
-  throw new Error("Invalid response from backend");
-}
+    if (data.content && Array.isArray(data.content)) {
+      raw = data.content[0]?.text || '';
+    }
 
-const data = result.data;
+    if (!raw) {
+      console.error(data);
+      throw new Error('Empty response from AI');
+    }
 
-// ✅ STEP 4: extract Claude response safely
-let raw = "";
+    let parsed;
 
-if (data.content && Array.isArray(data.content)) {
-  raw = data.content[0]?.text || "";
-}
+    try {
+      const clean = raw
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
 
-if (!raw) {
-  console.error(data);
-  throw new Error("Empty response from AI");
-}
+      parsed = JSON.parse(clean);
+    } catch (e) {
+      const match = raw.match(/\{[\s\S]*\}/);
 
-// ✅ STEP 5: parse JSON from AI
-let parsed;
+      if (match) {
+        parsed = JSON.parse(match[0]);
+      } else {
+        console.error(raw);
+        throw new Error('Could not parse AI response');
+      }
+    }
 
-try {
-  const clean = raw
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```\s*$/, '')
-    .trim();
+    if (!parsed.lines || !Array.isArray(parsed.lines)) {
+      console.error(parsed);
+      throw new Error('AI response does not contain valid lines data');
+    }
 
-  parsed = JSON.parse(clean);
+    huntData = parsed;
+    totalLines = parsed.lines.length;
 
-} catch (e) {
-  const match = raw.match(/\{[\s\S]*\}/);
+    renderResults(parsed);
 
-  if (match) {
-    parsed = JSON.parse(match[0]);
-  } else {
-    console.error(raw);
-    throw new Error("Could not parse AI response");
+  } catch (err) {
+    console.error(err);
+
+    document.getElementById('error-container').innerHTML = `
+      <div class="error-card">
+        ⚠️ Hunt failed: ${err.message}
+        <br>
+        <small>Make sure your Vercel API route and Anthropic API key are configured correctly.</small>
+      </div>
+    `;
+
+    document.getElementById('results-section').style.display = 'block';
+    document.getElementById('results-section').classList.add('visible');
+
+  } finally {
+    clearInterval(loaderInterval);
+
+    li.style.display = 'none';
+    btn.classList.remove('loading');
+    btnTxt.textContent = '⚡ HUNT THE CODE';
   }
 }
+</script>
 
-// ✅ FINAL
-huntData = parsed;
-totalLines = parsed.lines.length;
-renderResults(parsed);
-    
 
 // safe access
 const raw = data?.content?.[0]?.text || "No response";

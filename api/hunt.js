@@ -1,13 +1,14 @@
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   try {
-    const { code, language } = req.body;
+    const { code, language } = req.body || {};
 
-    const prompt = `
-You are a brilliant code educator. Analyze this ${language} code and return ONLY JSON.
-
-Code:
-${code}
-`;
+    if (!code) {
+      return res.status(400).json({ error: "No code provided" });
+    }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -18,19 +19,34 @@ ${code}
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }]
+        max_tokens: 1500,
+        messages: [
+          {
+            role: "user",
+            content: `Explain this ${language} code step by step in JSON format:\n\n${code}`
+          }
+        ]
       })
     });
 
     const data = await response.json();
 
-    res.status(200).json({
+    if (!response.ok) {
+      console.error(data);
+      return res.status(500).json({
+        error: data
+      });
+    }
+
+    return res.status(200).json({
       success: true,
       data: data
     });
 
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      error: err.message
+    });
   }
 }

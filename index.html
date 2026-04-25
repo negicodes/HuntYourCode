@@ -516,7 +516,6 @@ print(result)"></textarea>
 </footer>
 
 <script>
-/* ══ VISITOR COUNTER ══════════════════════════════════════════════ */
 (function(){
   const KEY = 'hyc_visit_count';
   let count = parseInt(localStorage.getItem(KEY) || '0', 10);
@@ -525,83 +524,269 @@ print(result)"></textarea>
 
   const numEl = document.getElementById('vc-num');
 
-  // Animated count-up on load
   function animateCount(target) {
     const duration = 1200;
     const start = Math.max(0, target - Math.min(target, 30));
     const startTime = performance.now();
+
     function tick(now) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(start + (target - start) * eased);
+
       numEl.textContent = current;
-      if (progress < 1) requestAnimationFrame(tick);
-      else {
+
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
         numEl.textContent = target;
         numEl.classList.add('pop');
         setTimeout(() => numEl.classList.remove('pop'), 500);
       }
     }
+
     requestAnimationFrame(tick);
   }
 
-  // Delay slightly so the page has rendered
   setTimeout(() => animateCount(count), 1400);
 })();
 
-/* ══ CURSOR ══════════════════════════════════════════════════════ */
+/* CURSOR */
 const cursorEl = document.getElementById('glow-cursor');
 const cursorDot = document.getElementById('cursor-dot');
 const TRAIL_COLORS = ['#00f5ff','#ff006e','#39ff14','#bf00ff','#ffd700'];
-let trailIdx=0,mx=0,my=0,tx=0,ty=0;
-document.addEventListener('mousemove',e=>{
-  mx=e.clientX;my=e.clientY;
-  cursorDot.style.left=mx+'px';cursorDot.style.top=my+'px';
-  createTrail(mx,my);
-});
-function animCursor(){tx+=(mx-tx)*.12;ty+=(my-ty)*.12;cursorEl.style.left=tx+'px';cursorEl.style.top=ty+'px';requestAnimationFrame(animCursor);}
-animCursor();
-let trailTimer=0;
-function createTrail(x,y){trailTimer++;if(trailTimer%3!==0)return;const t=document.createElement('div');t.className='cursor-trail';const sz=8+Math.random()*8;t.style.cssText=`left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;background:${TRAIL_COLORS[trailIdx%TRAIL_COLORS.length]};box-shadow:0 0 10px ${TRAIL_COLORS[trailIdx%TRAIL_COLORS.length]};`;document.body.appendChild(t);trailIdx++;setTimeout(()=>t.remove(),600);}
 
-/* ══ PARTICLE CANVAS ═════════════════════════════════════════════ */
-const canvas=document.getElementById('particle-canvas');
-const ctx=canvas.getContext('2d');
-let W,H,particles=[];
-function resizeCanvas(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
-window.addEventListener('resize',resizeCanvas);resizeCanvas();
-const NEON=['#00f5ff','#ff006e','#39ff14','#bf00ff','#ffd700','#ff6b00'];
-class Particle{constructor(){this.reset();}reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*1.5+.5;this.c=NEON[Math.floor(Math.random()*NEON.length)];this.alpha=Math.random()*.6+.1;this.life=0;this.maxLife=200+Math.random()*300;}update(){this.x+=this.vx;this.y+=this.vy;this.life++;if(this.life>this.maxLife||this.x<0||this.x>W||this.y<0||this.y>H)this.reset();}draw(){ctx.save();ctx.globalAlpha=this.alpha*(1-this.life/this.maxLife);ctx.fillStyle=this.c;ctx.shadowColor=this.c;ctx.shadowBlur=6;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}}
-for(let i=0;i<120;i++)particles.push(new Particle());
-function drawConnections(){for(let i=0;i<particles.length;i++){for(let j=i+1;j<particles.length;j++){const dx=particles[i].x-particles[j].x;const dy=particles[i].y-particles[j].y;const d=Math.sqrt(dx*dx+dy*dy);if(d<100){ctx.save();ctx.globalAlpha=.08*(1-d/100);ctx.strokeStyle=particles[i].c;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.stroke();ctx.restore();}}}}
-function animParticles(){ctx.clearRect(0,0,W,H);particles.forEach(p=>{p.update();p.draw();});drawConnections();requestAnimationFrame(animParticles);}
+let trailIdx = 0;
+let mx = 0;
+let my = 0;
+let tx = 0;
+let ty = 0;
+let trailTimer = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX;
+  my = e.clientY;
+
+  cursorDot.style.left = mx + 'px';
+  cursorDot.style.top = my + 'px';
+
+  createTrail(mx, my);
+});
+
+function animCursor() {
+  tx += (mx - tx) * .12;
+  ty += (my - ty) * .12;
+
+  cursorEl.style.left = tx + 'px';
+  cursorEl.style.top = ty + 'px';
+
+  requestAnimationFrame(animCursor);
+}
+
+animCursor();
+
+function createTrail(x, y) {
+  trailTimer++;
+
+  if (trailTimer % 3 !== 0) return;
+
+  const t = document.createElement('div');
+  const color = TRAIL_COLORS[trailIdx % TRAIL_COLORS.length];
+  const sz = 8 + Math.random() * 8;
+
+  t.className = 'cursor-trail';
+  t.style.cssText = `left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;background:${color};box-shadow:0 0 10px ${color};`;
+
+  document.body.appendChild(t);
+  trailIdx++;
+
+  setTimeout(() => t.remove(), 600);
+}
+
+/* PARTICLE CANVAS */
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+const NEON = ['#00f5ff','#ff006e','#39ff14','#bf00ff','#ffd700','#ff6b00'];
+
+let W;
+let H;
+let particles = [];
+
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - .5) * .4;
+    this.vy = (Math.random() - .5) * .4;
+    this.r = Math.random() * 1.5 + .5;
+    this.c = NEON[Math.floor(Math.random() * NEON.length)];
+    this.alpha = Math.random() * .6 + .1;
+    this.life = 0;
+    this.maxLife = 200 + Math.random() * 300;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life++;
+
+    if (this.life > this.maxLife || this.x < 0 || this.x > W || this.y < 0 || this.y > H) {
+      this.reset();
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = this.alpha * (1 - this.life / this.maxLife);
+    ctx.fillStyle = this.c;
+    ctx.shadowColor = this.c;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+for (let i = 0; i < 120; i++) {
+  particles.push(new Particle());
+}
+
+function drawConnections() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+
+      if (d < 100) {
+        ctx.save();
+        ctx.globalAlpha = .08 * (1 - d / 100);
+        ctx.strokeStyle = particles[i].c;
+        ctx.lineWidth = .5;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+}
+
+function animParticles() {
+  ctx.clearRect(0, 0, W, H);
+
+  particles.forEach(p => {
+    p.update();
+    p.draw();
+  });
+
+  drawConnections();
+  requestAnimationFrame(animParticles);
+}
+
 animParticles();
 
-/* ══ EDITOR HELPERS ══════════════════════════════════════════════ */
-let currentLang='python';
-const extMap={python:'py',javascript:'js',java:'java',cpp:'cpp',c:'c',typescript:'ts',rust:'rs',go:'go'};
-function setLang(btn){document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentLang=btn.dataset.lang;document.getElementById('editor-filename').textContent=`untitled.${extMap[currentLang]||currentLang}`;}
-const codeInput=document.getElementById('code-input');
-const lineNums=document.getElementById('line-nums');
-codeInput.addEventListener('input',updateLineNums);
-codeInput.addEventListener('scroll',()=>{lineNums.scrollTop=codeInput.scrollTop;});
-function updateLineNums(){const lines=codeInput.value.split('\n').length;lineNums.innerHTML=Array.from({length:lines},(_,i)=>i+1).join('<br>');}
+/* EDITOR HELPERS */
+let currentLang = 'python';
+
+const extMap = {
+  python: 'py',
+  javascript: 'js',
+  java: 'java',
+  cpp: 'cpp',
+  c: 'c',
+  typescript: 'ts',
+  rust: 'rs',
+  go: 'go'
+};
+
+function setLang(btn) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  currentLang = btn.dataset.lang;
+  document.getElementById('editor-filename').textContent = `untitled.${extMap[currentLang] || currentLang}`;
+}
+
+const codeInput = document.getElementById('code-input');
+const lineNums = document.getElementById('line-nums');
+
+codeInput.addEventListener('input', updateLineNums);
+codeInput.addEventListener('scroll', () => {
+  lineNums.scrollTop = codeInput.scrollTop;
+});
+
+function updateLineNums() {
+  const lines = codeInput.value.split('\n').length;
+  lineNums.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+}
+
 updateLineNums();
 
-/* ══ HUNT STATE ══════════════════════════════════════════════════ */
-let huntData=null,currentStep=-1,totalLines=0,isPlaying=false,playInterval=null,playSpeed=1800;
+/* HUNT STATE */
+let huntData = null;
+let currentStep = -1;
+let totalLines = 0;
+let isPlaying = false;
+let playInterval = null;
+let playSpeed = 1800;
 
-/* ══ HUNT BTN FX ═════════════════════════════════════════════════ */
-function spawnBtnParticles(){const bp=document.getElementById('btn-particles');bp.innerHTML='';for(let i=0;i<12;i++){const p=document.createElement('div');p.className='btn-particle';const angle=Math.random()*360;const dist=40+Math.random()*60;const dx=Math.cos(angle*Math.PI/180)*dist;const dy=Math.sin(angle*Math.PI/180)*dist;p.style.cssText=`--dx:${dx}px;--dy:${dy}px;animation-delay:${Math.random()*.2}s;background:${NEON[Math.floor(Math.random()*NEON.length)]};`;bp.appendChild(p);}}
+/* BUTTON FX */
+function spawnBtnParticles() {
+  const bp = document.getElementById('btn-particles');
+  bp.innerHTML = '';
 
-/* ══ MAIN HUNT ═══════════════════════════════════════════════════ */
-const LOADER_MSGS=['INITIALIZING HUNT SEQUENCE...','PARSING CODE STRUCTURE...','FEEDING TO AI ENGINE...','DECODING LOGIC FLOWS...','MAPPING ITERATIONS...','GENERATING EXPLANATIONS...'];
-let loaderMsgIdx=0,loaderInterval=null;
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    const angle = Math.random() * 360;
+    const dist = 40 + Math.random() * 60;
+    const dx = Math.cos(angle * Math.PI / 180) * dist;
+    const dy = Math.sin(angle * Math.PI / 180) * dist;
 
-<script>
-async function huntCode(){
+    p.className = 'btn-particle';
+    p.style.cssText = `--dx:${dx}px;--dy:${dy}px;animation-delay:${Math.random() * .2}s;background:${NEON[Math.floor(Math.random() * NEON.length)]};`;
+
+    bp.appendChild(p);
+  }
+}
+
+/* MAIN HUNT */
+const LOADER_MSGS = [
+  'INITIALIZING HUNT SEQUENCE...',
+  'PARSING CODE STRUCTURE...',
+  'FEEDING TO AI ENGINE...',
+  'DECODING LOGIC FLOWS...',
+  'MAPPING ITERATIONS...',
+  'GENERATING EXPLANATIONS...'
+];
+
+let loaderMsgIdx = 0;
+let loaderInterval = null;
+
+function getErrorMessage(result) {
+  if (!result) return 'Backend request failed';
+  if (typeof result.error === 'string') return result.error;
+  if (result.error?.message) return result.error.message;
+  if (result.message) return result.message;
+  return 'Backend request failed';
+}
+
+async function huntCode() {
   const code = codeInput.value.trim();
 
   if (!code) {
@@ -610,6 +795,7 @@ async function huntCode(){
   }
 
   stopPlay();
+
   huntData = null;
   currentStep = -1;
   totalLines = 0;
@@ -627,9 +813,10 @@ async function huntCode(){
 
   btn.classList.add('loading');
   btnTxt.textContent = '🔍 HUNTING...';
-
   li.style.display = 'block';
+
   loaderMsgIdx = 0;
+  clearInterval(loaderInterval);
 
   loaderInterval = setInterval(() => {
     lm.textContent = LOADER_MSGS[loaderMsgIdx % LOADER_MSGS.length];
@@ -639,44 +826,34 @@ async function huntCode(){
   try {
     const res = await fetch('/api/hunt', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        code: code,
-        language: currentLang
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, language: currentLang })
     });
 
     let result;
 
     try {
       result = await res.json();
-    } catch (e) {
-      throw new Error('Invalid JSON response from backend');
+    } catch {
+      throw new Error('Backend did not return JSON');
     }
 
     if (!res.ok) {
-      console.error(result);
-      throw new Error(result?.error || 'Backend request failed');
-    }
-
-    if (!result || !result.data) {
-      console.error(result);
-      throw new Error('Invalid response from backend');
+      throw new Error(getErrorMessage(result));
     }
 
     const data = result.data;
 
-    let raw = '';
-
-    if (data.content && Array.isArray(data.content)) {
-      raw = data.content[0]?.text || '';
+    if (!data?.content || !Array.isArray(data.content)) {
+      console.error(result);
+      throw new Error('Invalid response from AI backend');
     }
 
-    if (!raw) {
+    const raw = data.content[0]?.text || '';
+
+    if (!raw.trim()) {
       console.error(data);
-      throw new Error('Empty response from AI');
+      throw new Error('AI returned an empty response');
     }
 
     let parsed;
@@ -689,20 +866,20 @@ async function huntCode(){
         .trim();
 
       parsed = JSON.parse(clean);
-    } catch (e) {
+    } catch {
       const match = raw.match(/\{[\s\S]*\}/);
 
-      if (match) {
-        parsed = JSON.parse(match[0]);
-      } else {
+      if (!match) {
         console.error(raw);
-        throw new Error('Could not parse AI response');
+        throw new Error('Could not parse AI response as JSON');
       }
+
+      parsed = JSON.parse(match[0]);
     }
 
     if (!parsed.lines || !Array.isArray(parsed.lines)) {
       console.error(parsed);
-      throw new Error('AI response does not contain valid lines data');
+      throw new Error('AI response does not contain valid line data');
     }
 
     huntData = parsed;
@@ -715,23 +892,279 @@ async function huntCode(){
 
     document.getElementById('error-container').innerHTML = `
       <div class="error-card">
-        ⚠️ Hunt failed: ${err.message}
+        ⚠️ Hunt failed: ${escHtml(err.message)}
         <br>
-        <small>Make sure your Vercel API route and Anthropic API key are configured correctly.</small>
+        <small>If this says credit balance is too low, add credits in Anthropic billing and redeploy.</small>
       </div>
     `;
 
     document.getElementById('results-section').style.display = 'block';
     document.getElementById('results-section').classList.add('visible');
+    document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } finally {
     clearInterval(loaderInterval);
-
     li.style.display = 'none';
     btn.classList.remove('loading');
     btnTxt.textContent = '⚡ HUNT THE CODE';
   }
 }
+
+/* RENDER RESULTS */
+function renderResults(d) {
+  document.getElementById('overview-text').textContent = d.overview || 'Code analysis completed.';
+
+  document.getElementById('meta-chips').innerHTML = `
+    <div class="chip blue">⚙ ${(d.language || currentLang || 'CODE').toUpperCase()}</div>
+    <div class="chip pink">📊 ${d.complexity || 'N/A'}</div>
+    <div class="chip green">📄 ${d.totalLines || d.lines.length} Lines</div>
+    <div class="chip gold">🔍 ${d.lines.filter(l => l.isIterative).length} Iterative Lines</div>
+    <div class="chip purple">🧠 AI Explained</div>
+  `;
+
+  document.getElementById('overview-card').style.display = 'block';
+  document.getElementById('lang-badge').textContent = d.language || currentLang;
+  document.getElementById('step-total').textContent = totalLines;
+
+  const wrap = document.getElementById('code-lines-wrap');
+  wrap.innerHTML = '';
+
+  d.lines.forEach((l, idx) => {
+    const row = document.createElement('div');
+
+    row.className = 'code-line-row';
+    row.id = `line-row-${idx}`;
+    row.innerHTML = `
+      <div class="line-no">${l.lineNumber}</div>
+      <div class="code-content">${escHtml(l.code)}</div>
+      <div class="line-marker"></div>
+    `;
+
+    row.addEventListener('click', () => stepTo(idx));
+    wrap.appendChild(row);
+  });
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results-section').classList.add('visible');
+  document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  setTimeout(() => stepTo(0), 400);
+}
+
+/* STEP FUNCTIONS */
+function stepTo(idx) {
+  if (!huntData || idx < 0 || idx >= totalLines) return;
+
+  if (currentStep >= 0) {
+    const prev = document.getElementById(`line-row-${currentStep}`);
+
+    if (prev) {
+      prev.classList.remove('active');
+      prev.classList.add('visited');
+    }
+  }
+
+  currentStep = idx;
+
+  const line = huntData.lines[idx];
+  const row = document.getElementById(`line-row-${idx}`);
+
+  if (row) {
+    row.classList.add('active');
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('step-current').textContent = idx + 1;
+  document.getElementById('exp-step-badge').textContent = `Step ${idx + 1}`;
+
+  const pct = Math.round(((idx + 1) / totalLines) * 100);
+
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${pct}% complete`;
+
+  renderExplanation(line, idx);
+}
+
+function stepNext() {
+  if (currentStep < totalLines - 1) {
+    stepTo(currentStep + 1);
+  } else {
+    stopPlay();
+  }
+}
+
+function stepPrev() {
+  if (currentStep > 0) stepTo(currentStep - 1);
+}
+
+function togglePlay() {
+  if (isPlaying) stopPlay();
+  else startPlay();
+}
+
+function startPlay() {
+  if (!huntData || totalLines === 0) return;
+
+  isPlaying = true;
+  document.getElementById('play-btn').textContent = '⏸ PAUSE';
+
+  playInterval = setInterval(() => {
+    if (currentStep >= totalLines - 1) {
+      stopPlay();
+      return;
+    }
+
+    stepNext();
+  }, playSpeed);
+}
+
+function stopPlay() {
+  isPlaying = false;
+
+  const playBtn = document.getElementById('play-btn');
+  if (playBtn) playBtn.textContent = '▶ PLAY';
+
+  clearInterval(playInterval);
+}
+
+function updateSpeed() {
+  playSpeed = parseInt(document.getElementById('speed-select').value, 10);
+
+  if (isPlaying) {
+    stopPlay();
+    startPlay();
+  }
+}
+
+/* EXPLANATION */
+const TYPE_COLORS = {
+  import: 'blue',
+  declaration: 'purple',
+  assignment: 'blue',
+  loop: 'gold',
+  condition: 'pink',
+  function_def: 'purple',
+  return: 'pink',
+  print: 'green',
+  expression: 'blue',
+  comment: 'text-dim',
+  other: 'text-dim'
+};
+
+const TYPE_ICONS = {
+  import: '📦',
+  declaration: '📝',
+  assignment: '🎯',
+  loop: '🔁',
+  condition: '🔀',
+  function_def: '⚙️',
+  return: '↩️',
+  print: '🖨️',
+  expression: '💡',
+  comment: '💬',
+  other: '•'
+};
+
+function renderExplanation(line, idx) {
+  const eb = document.getElementById('exp-body');
+  const type = line.type || 'other';
+  const color = TYPE_COLORS[type] || 'blue';
+  const icon = TYPE_ICONS[type] || '•';
+
+  let iterHtml = '';
+
+  if (line.isIterative && line.iterationNote) {
+    const iterCount = line.iterationCount || 5;
+    const bubbles = Array.from({ length: Math.min(iterCount, 10) }, (_, i) => {
+      const cls = i < idx % Math.max(iterCount, 1) ? 'done' : i === idx % Math.max(iterCount, 1) ? 'current' : '';
+      return `<div class="iter-bubble ${cls}">${i}</div>`;
+    }).join('');
+
+    iterHtml = `
+      <div class="iteration-box">
+        <span class="iter-label">🔁 ITERATION DETAIL</span>
+        <div class="iter-text">${escHtml(line.iterationNote)}</div>
+        ${iterCount > 0 ? `<div class="iter-visual">${bubbles}</div>` : ''}
+      </div>
+    `;
+  }
+
+  eb.innerHTML = `
+    <span class="exp-step-label">LINE ${line.lineNumber} — ${type.toUpperCase().replace('_', ' ')}</span>
+    <div class="exp-type-badge chip ${color}">${icon} ${type.replace('_', ' ')}</div>
+    ${line.code ? `<div class="exp-code-preview">${escHtml(line.code)}</div>` : ''}
+    <div class="exp-text">${escHtml(line.explanation || 'No explanation provided.')}</div>
+    ${iterHtml}
+  `;
+}
+
+/* UTILS */
+function escHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function flashError(msg) {
+  const btn = document.getElementById('hunt-btn');
+  const txt = document.getElementById('hunt-btn-text');
+  const orig = txt.textContent;
+
+  txt.textContent = '⚠ ' + msg;
+  btn.style.borderColor = 'var(--c-pink)';
+  btn.style.color = 'var(--c-pink)';
+
+  setTimeout(() => {
+    txt.textContent = orig;
+    btn.style.borderColor = 'var(--c-blue)';
+    btn.style.color = 'var(--c-blue)';
+  }, 2500);
+}
+
+/* CUBE MOUSE */
+const cube = document.querySelector('.cube');
+
+document.addEventListener('mousemove', e => {
+  const rx = (e.clientY / window.innerHeight - .5) * 20;
+  const ry = (e.clientX / window.innerWidth - .5) * 20;
+
+  if (cube) {
+    cube.style.animationPlayState = 'paused';
+    cube.style.transform = `rotateX(${20 + rx}deg) rotateY(${ry * 4}deg) rotateZ(5deg)`;
+
+    setTimeout(() => {
+      if (cube) cube.style.animationPlayState = 'running';
+    }, 200);
+  }
+});
+
+/* SMOOTH SCROLL */
+document.querySelectorAll('.nav-link').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) t.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+/* INTERSECTION OBSERVER */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animation = 'fadeIn .6s ease both';
+      e.target.style.animationDelay = e.target.dataset.delay || '0s';
+    }
+  });
+}, { threshold: .15 });
+
+document.querySelectorAll('.feature-card').forEach((c, i) => {
+  c.dataset.delay = `${i * 0.12}s`;
+  c.style.opacity = '0';
+  io.observe(c);
+});
 </script>
 
 

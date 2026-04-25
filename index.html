@@ -646,41 +646,79 @@ RULES:
 Code to analyze:
 ${code}`;
     
-  // const ANTHROPIC_API_KEY = 'sk-ant----'; // paste new key after revoking old one
+ const res = await fetch('/api/hunt', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    code: code,
+    language: currentLang
+  })
+});
 
-  // const res = await fetch('https://api.anthropic.com/v1/messages', {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     'x-api-key': ANTHROPIC_API_KEY,                            // ✅ key sent here
-  //     'anthropic-version': '2023-06-01',                         // ✅ required
-  //     'anthropic-dangerous-direct-browser-access': 'true'        // ✅ required for browser
-  //   },
-  //     body: JSON.stringify({
-  //     model: 'claude-sonnet-4-20250514',
-  //     max_tokens: 6000,
-  //     messages: [{role: 'user', content: prompt}]
-  //   })
-  // });
+// ✅ STEP 1: parse response safely
+let result;
+try {
+  result = await res.json();
+} catch (e) {
+  throw new Error("Invalid JSON response from backend");
+}
 
-    const res = await fetch('/api/hunt', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      code: code,
-      language: currentLang
-    })
-  });
-    if(!res.ok){const err=await res.json();throw new Error(err.error?.message||`API error ${res.status}`);}
-    const result = await res.json();
+// ✅ STEP 2: check backend status
+if (!res.ok) {
+  console.error(result);
+  throw new Error(result?.error || "Backend request failed");
+}
 
-    if (!result.success) {
-      throw new Error("API failed");
-    }
+// ✅ STEP 3: validate structure
+if (!result || !result.data) {
+  console.error(result);
+  throw new Error("Invalid response from backend");
+}
 
-    const data = result.data;
+const data = result.data;
+
+// ✅ STEP 4: extract Claude response safely
+let raw = "";
+
+if (data.content && Array.isArray(data.content)) {
+  raw = data.content[0]?.text || "";
+}
+
+if (!raw) {
+  console.error(data);
+  throw new Error("Empty response from AI");
+}
+
+// ✅ STEP 5: parse JSON from AI
+let parsed;
+
+try {
+  const clean = raw
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/, '')
+    .trim();
+
+  parsed = JSON.parse(clean);
+
+} catch (e) {
+  const match = raw.match(/\{[\s\S]*\}/);
+
+  if (match) {
+    parsed = JSON.parse(match[0]);
+  } else {
+    console.error(raw);
+    throw new Error("Could not parse AI response");
+  }
+}
+
+// ✅ FINAL
+huntData = parsed;
+totalLines = parsed.lines.length;
+renderResults(parsed);
+    
 
 // safe access
 const raw = data?.content?.[0]?.text || "No response";

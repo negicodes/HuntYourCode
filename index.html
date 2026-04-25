@@ -674,8 +674,16 @@ ${code}`;
     })
   });
     if(!res.ok){const err=await res.json();throw new Error(err.error?.message||`API error ${res.status}`);}
-    const data=await res.json();
-    const raw=data.content.find(b=>b.type==='text')?.text||'';
+    const result = await res.json();
+
+    if (!result.success) {
+      throw new Error("API failed");
+    }
+
+    const data = result.data;
+
+// safe access
+const raw = data?.content?.[0]?.text || "No response";
     let parsed;
     try{const clean=raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/,'').trim();parsed=JSON.parse(clean);}
     catch(e){const match=raw.match(/\{[\s\S]*\}/);if(match)parsed=JSON.parse(match[0]);else throw new Error('Could not parse AI response as JSON');}

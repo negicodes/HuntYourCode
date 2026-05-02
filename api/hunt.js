@@ -54,8 +54,9 @@ ${code}`;
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`
       },
       body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4",
-        max_tokens: 4000,
+        model: "google/gemma-4-26b-a4b-it:free",
+        max_tokens: 2000,
+
         messages: [
           {
             role: "user",

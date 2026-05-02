@@ -54,8 +54,9 @@ ${code}`;
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`
       },
       body: JSON.stringify({
-        model: "google/gemma-4-26b-a4b-it:free",
-        max_tokens: 2000,
+        model: "openrouter/free",
+        max_tokens: 1000,
+
 
         messages: [
           {

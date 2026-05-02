@@ -10,8 +10,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No code provided" });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: "ANTHROPIC_API_KEY is missing" });
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.status(500).json({ error: "OPENROUTER_API_KEY is missing" });
     }
 
     const prompt = `You are a brilliant code educator. Analyze the following ${language} code and return ONLY a valid JSON object. No markdown. No backticks. No extra text.
@@ -47,15 +47,14 @@ Rules:
 Code:
 ${code}`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "anthropic/claude-sonnet-4",
         max_tokens: 4000,
         messages: [
           {
@@ -71,13 +70,19 @@ ${code}`;
     if (!response.ok) {
       console.error(data);
       return res.status(response.status).json({
-        error: data?.error?.message || "Anthropic request failed"
+        error: data?.error?.message || "OpenRouter request failed"
       });
     }
 
     return res.status(200).json({
       success: true,
-      data
+      data: {
+        content: [
+          {
+            text: data?.choices?.[0]?.message?.content || ""
+          }
+        ]
+      }
     });
 
   } catch (err) {
